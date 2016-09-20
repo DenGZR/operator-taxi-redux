@@ -1,16 +1,15 @@
 import {makeRequest, Endpoints} from  "../utils/api"
 
 export class Authorisation {
-    static checkAuthorisation( nextState, replace ) {
-      let token = localStorage.getItem("token");
-      if( !token ) {
-        replace('/login')
-      }
-    }
+    // static checkAuthInBackUp( nextState, replace ) {
+    //   let token = localStorage.getItem("token");
+    //   if( !token ) {
+    //     replace('/login')
+    //   }
+    // }
 
-    static getLogout( nextState, replace ) {
+    static removeToken() {
       localStorage.removeItem("token");
-      replace('/login');
     }
 
     static setToken(token) {
@@ -19,5 +18,5 @@ export class Authorisation {
 
     static getToken() {
         return localStorage.getItem("token");
-    }     
+    }
 }

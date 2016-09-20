@@ -79,6 +79,13 @@ export class DriverCollection {
       return this.filter(driver=> driver.driverPhones.indexOf(phone) != -1)
     }
 
+    getDriverFreeOnline() {
+      return this.filter(driver=>(driver.status === "active" && driver.state === "online"))
+    }
+
+    getDriverBusyOnline() {
+      return this.filter(driver=>(driver.status === "active" && driver.state === "on_order"))
+    }
 }
 // от сервера приходит обьект
 //Amount:0
@@ -100,7 +107,8 @@ let setDefVal = (object) => {
  let def = {};
  for (var key in object) {
    if (object.hasOwnProperty(key)) {
-     def[key] = !object[key] || object[key] === "" ? "--" : object[key];
+    //  def[key] = !object[key] || object[key] === "" ? "--" : object[key];
+     def[key] = object[key] === "" ? "--" : object[key];
    }
  }
  return def;
@@ -117,6 +125,14 @@ export class Driver {
 
     get amount() { // баланс водителя
       return this._driver.Amount;
+    }
+
+    get lastLat() {
+      return this._driver.LastLat;
+    }
+
+    get lastLng() {
+      return this._driver.LastLng;
     }
 
     get status() {

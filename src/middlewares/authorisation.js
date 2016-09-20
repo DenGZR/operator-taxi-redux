@@ -1,66 +1,29 @@
 import {  browserHistory } from 'react-router'
+import { Authorisation } from "../utils/authorisation"
+import { LOGIN, LOGOUT, START, SUCCESS, FAIL, CHECK_AUTH, SET_TOKEN, REMOVE_TOKEN } from '../constants'
+//checkAuthorisation middlewares
 
 export default store => next => action => {
-  
-    let token = localStorage.getItem("token");
-    if( !token ) {
-      browserHistory.replace()
-      location.href = "/"
-    }
-    next(action)
-}
+  const { type, response } = action
+  const backUpToken = Authorisation.getToken()
+  const { auth } = store.getState()
+  const isLogin = auth.get('isLogin')
+  const token = auth.get('token')
+// debugger
+  switch (type) {
+      case CHECK_AUTH:
+        if(!isLogin && !token && backUpToken) {
+          store.dispatch({ type: SET_TOKEN, token: backUpToken })
+        }
+        break;
 
+      case LOGIN + SUCCESS:
+        Authorisation.setToken(response.data.token);
+        break;
 
-import {makeRequest, Endpoints} from  "../utils/api"
-
-export class Authorisation {
-    static checkAuthorisation( nextState, replace ) {
-      let token = localStorage.getItem("token");
-      if( !token ) {
-        replace('/login')
-      }
-    }
-
-    static getLogout( nextState, replace ) {
-      localStorage.removeItem("token");
-      replace('/login');
-    }
-
-    static setToken(token) {
-        localStorage.setItem("token", token);
-    }
-
-    static getToken() {
-        return localStorage.getItem("token");
-    }
-
-    static removeToken() {
-        makeRequest(Endpoints.REMOVE_AUTH_TOKEN())
-            .then(() => {
-                localStorage.removeItem("token");
-                location.href = "/"
-            })
-            .catch(() => {
-                localStorage.removeItem("token");
-                location.href = "/"
-            });
-    }
-    static getAuthToken(userLogin,userPassword) {
-      return (
-        makeRequest(Endpoints.GET_AUTH_TOKEN(), {
-          login: userLogin,
-          password: userPassword
-          })
-          .then(response=> {
-              //debugger;
-              if (response.data && response.data.token) {
-                Authorisation.setToken(response.data.token);
-              }
-              return response.data.token;
-          })
-          .catch(error=> {
-              console.log("Authorisation Error");
-          })
-      )
-    }
+      case LOGOUT + SUCCESS:
+        Authorisation.removeToken();
+        break;
+  }
+  next(action)
 }

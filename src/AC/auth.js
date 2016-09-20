@@ -1,30 +1,42 @@
-import { LOGIN, LOGOUT, START, SUCCESS, FAIL } from '../constants'
+import { LOGIN, LOGOUT, START, SUCCESS, FAIL, CHECK_AUTH, SET_TOKEN, REMOVE_TOKEN } from '../constants'
 import { Authorisation } from "../utils/authorisation"
 import {makeRequest, Endpoints} from  "../utils/api"
 
-export function addComment(comment, articleId) {
+export function checkAuth() {
     return {
-        type: ADD_COMMENT,
-        payload: {...comment, articleId},
-        withRandomId: true
+        type: CHECK_AUTH
+    }
+}
+
+export function setToken(token) {
+    return {
+        type: SET_TOKEN,
+        token
+    }
+}
+
+export function removeToken() {
+    return {
+        type: REMOVE_TOKEN
     }
 }
 
 export function getAuthToken(userLogin,userPassword) {
     return (dispatch, state) => {
+        let { auth } = store.getState()
+        let token = auth.get('token')
         dispatch({
             type: LOGIN + START
         })
 
-        makeRequest(Endpoints.GET_AUTH_TOKEN(), {
+        makeRequest(token, Endpoints.GET_AUTH_TOKEN(), {
           login: userLogin,
           password: userPassword
-          })
+        })
           .then(response=> {
               //debugger;
               if (response.data && response.data.token) {
                 // console.log("Authorisation SUCCESS");
-                Authorisation.setToken(response.data.token);
                 dispatch({ type: LOGIN + SUCCESS, response })
               }
           })
@@ -35,15 +47,26 @@ export function getAuthToken(userLogin,userPassword) {
     }
 }
 
+export function removeAuthToken(userLogin,userPassword) {
+    return (dispatch, state) => {
+        dispatch({
+            type: LOGOUT + START
+        })
 
-// static removeToken() {
-//     makeRequest(Endpoints.REMOVE_AUTH_TOKEN())
-//         .then(() => {
-//             localStorage.removeItem("token");
-//             location.href = "/"
-//         })
-//         .catch(() => {
-//             localStorage.removeItem("token");
-//             location.href = "/"
-//         });
-// }
+        makeRequest( token, Endpoints.GET_AUTH_TOKEN(), {
+          login: userLogin,
+          password: userPassword
+          })
+          .then(response=> {
+              //debugger;
+              if (response.data ) {
+                // console.log("Authorisation SUCCESS");
+                dispatch({ type: LOGOUT + SUCCESS, response })
+              }
+          })
+          .catch(error=> {
+              // console.log("Authorisation FAIL");
+              dispatch({ type: LOGOUT + FAIL, error })
+          })
+    }
+}

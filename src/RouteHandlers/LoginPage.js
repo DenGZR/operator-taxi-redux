@@ -3,31 +3,33 @@ import ReactDOM from 'react-dom'
 import { browserHistory } from 'react-router'
 import { connect } from 'react-redux'
 import {Grid, Row, Col} from 'react-bootstrap'
-import { getAuthToken } from '../AC/auth'
+import { getAuthToken, checkAuth } from '../AC/auth'
 import { Authorisation } from '../utils/authorisation'
 import {Loading} from '../components/Loading'
 
 
 
 class LoginPage extends Component {
+
     static propTypes = {
-        user: PropTypes.object.isRequired
+        auth : PropTypes.object.isRequired
     };
 
     state = {
-        // login: "",
-        // password: "",
-        login: "380500000001",
-        password: "Pipilatz123",
+        login: "",
+        password: "",
+        // login: "380500000001",
+        // password: "Pipilatz123",
         isLoading: false
 
     };
     componentWillReceiveProps(nextProps) {
-      const { user } = nextProps;
-      const isLoading = user.get('isLoading');
-      const isLogin = user.get('isLogin');
+      const { auth } = nextProps;
+      const isLoading = auth.get('isLoading');
+      const isLogin = auth.get('isLogin');
 
       if( isLogin ) {
+        console.log('redirect to orders');
         browserHistory.push('/orders')
       }
       if( this.state.isLoading !== isLoading ) {
@@ -36,9 +38,7 @@ class LoginPage extends Component {
     }
 
     componentWillMount() {
-      if (Authorisation.getToken()) {
-        browserHistory.push('/orders')
-      }
+      this.props.checkAuth()
     }
 
     render() {
@@ -87,7 +87,6 @@ class LoginPage extends Component {
     }
 
     handleSubmit = ev => {
-
       ev.preventDefault();
       console.log("submit");
       const { login, password, isLoading } = this.state;
@@ -98,6 +97,6 @@ class LoginPage extends Component {
 }
 
 export default connect((state) => {
-    const user = state.user
-    return { user }
-}, { getAuthToken })(LoginPage)
+    const auth = state.auth
+    return { auth }
+}, { getAuthToken, checkAuth })(LoginPage)

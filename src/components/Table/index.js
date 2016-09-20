@@ -1,29 +1,21 @@
 import React from 'react'
 
 //table-bordered
-export class Table extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
-    render() {        
-        const props = this.props;
-        const toggleShowTable = this.props.showTable ? "" : "hide";
-        return (
-          <div className={"table-responsive " + toggleShowTable}>
-            <table className="table table-bordered">
-              <thead>
-                <tr>
-                  { props.fields.map((field, i) => <th key={i}>{field.title}</th>) }
-                </tr>
-              </thead>
-              <tbody>
-                { props.data.map((dataItem, i)=><TableItem key={i} data={dataItem} fields={props.fields}/>) }
-              </tbody>
-            </table>
-          </div>
-        );
-    }
+export const Table = (props) => {
+  return (
+    <div className={"table-responsive"}>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            { props.fields.map((field, i) => <th key={i}>{field.title}</th>) }
+          </tr>
+        </thead>
+        <tbody>
+          { props.data.map((dataItem, i)=><TableItem key={i} data={dataItem} fields={props.fields}/>) }
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 

@@ -14,7 +14,6 @@ export class Point {
         }
     }
 
-
     static createFromData(data) {
         const p = new Point();
         p._data = data;
@@ -100,40 +99,48 @@ export class Point {
         return (this._data.lat == 0 && this._data.lng == 0)
     }
 
-    fillPlaceName() {
-        if (this._placeNameActual) {
-            return Promise.resolve(this._placeName);
-        }
-        if (!this.isEmpty()) {
-            const fetchPromise = Point.fetchPlaceName(this);
-            fetchPromise
-                .then((place) => {
-                    console.log(place);
-                    this._placeName = place.formatted_address;
-                    this._placeNameActual = true;
-                })
-                .catch((error) => {
-                    console.error(error);
-                });
-            return fetchPromise;
-        } else {
-            return Promise.resolve("");
-        }
+    fillPlaceName(place) {
+      if(place) {
+        this._placeName = place.formatted_address;
+        this._placeNameActual = true;
+      }
     }
 
-    static fetchPlaceName(/*Point*/ point) {
-        return new Promise((resolve, reject) => {
-            window.geocoder.geocode({location: point.toLatLng()}, function (results, status) {
-                if (status === google.maps.GeocoderStatus.OK) {
-                    if (results[0]) {
-                        resolve(results[0]);
-                    } else {
-                        reject(Error("No place found"));
-                    }
-                } else {
-                    reject(Error(`Geocoding fault, status: ${status}`));
-                }
-            });
-        })
-    }
 }
+
+// fillPlaceName() {
+//     if (this._placeNameActual) {
+//         return Promise.resolve(this._placeName);
+//     }
+//     if (!this.isEmpty()) {
+//         const fetchPromise = Point.fetchPlaceName(this);
+//         fetchPromise
+//             .then((place) => {
+//                 console.log(place);
+//                 this._placeName = place.formatted_address;
+//                 this._placeNameActual = true;
+//             })
+//             .catch((error) => {
+//                 console.error(error);
+//             });
+//         return fetchPromise;
+//     } else {
+//         return Promise.resolve("");
+//     }
+// }
+//
+// static fetchPlaceName(/*Point*/ point) {
+//     return new Promise((resolve, reject) => {
+//         window.geocoder.geocode({location: point.toLatLng()}, function (results, status) {
+//             if (status === google.maps.GeocoderStatus.OK) {
+//                 if (results[0]) {
+//                     resolve(results[0]);
+//                 } else {
+//                     reject(Error("No place found"));
+//                 }
+//             } else {
+//                 reject(Error(`Geocoding fault, status: ${status}`));
+//             }
+//         });
+//     })
+// }

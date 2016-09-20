@@ -1,199 +1,153 @@
 import React, {PropTypes, Component} from 'react';
 import ReactDOM from 'react-dom'
-import shouldPureComponentUpdate from 'react-pure-render/function'
+import { connect } from 'react-redux'
+// import shouldPureComponentUpdate from 'react-pure-render/function'
 import GoogleMap from 'google-map-react'
+import {Grid, Row, Col} from 'react-bootstrap'
 import {makeRequest, Endpoints} from '../utils/api'
 import Marker from "../components/Marker"
-import FormAddDriverToOrder from "../components/FormAddDriverToOrder"
-import Filter from "../utils/Filter"
+import FormSetDriverToOrder from "../containers/FormAddDriverToOrder"
 
-class Root extends Component {
+import { getDrivers, setToCurrentDriver, setDriverToOrder } from '../AC/driver'
+import { getOrders, setToCurrentOrder } from '../AC/order'
 
-    static defaultProps = {
-        center: {lat: 50.450000 , lng: 30.500000},
-        zoom: 10
-    };
+class ActivityMapPage extends Component {
 
-    shouldComponentUpdate = shouldPureComponentUpdate;
+  static defaultProps = {
+      center: {lat: 50.450000 , lng: 30.500000},
+      zoom: 10
+  };
 
-    constructor(props) {
-        super(props);
-        this.loadData = this.loadData.bind(this);
-        this.handlerMakeRequest = this.handlerMakeRequest.bind(this);
-        // this.handlerChangeDataForm = this.handlerChangeDataForm.bind(this);
-        this.state = {
-            orders: [],
-            driversFree: [],
-            driversBusy: [],
-            currentOrderId: null,
-            currentDriverId: null
-        };
+  // shouldComponentUpdate = shouldPureComponentUpdate;
+
+
+
+  componentWillReceiveProps(nextProps) {
+
+  }
+
+  componentWillMount() {
+    const { orders, drivers } = this.props;
+
+    if( !orders.get('loaded') ) {
+      this.props.getOrders();
     }
-
-    loadData() {
-
-        makeRequest(Endpoints.GET_ORDER_LIST())
-            .then(response => {
-                let ordersArr = Filter(response.data.orders, order => order.status === "new");
-                // console.log('orders ',response.data.orders);
-                //console.log('filter orders ', ordersArr );
-                this.setState({
-                    orders: ordersArr
-                })
-            })
-
-        makeRequest(Endpoints.GET_DRIVER_LIST())
-            .then(response=> {
-                let freeDrivers = Filter(response.data.data, driver=>(driver.Status === "active" && driver.State === "online"));
-                let busyDrivers = Filter(response.data.data, driver=>(driver.Status === "active" && driver.State === "on_order"));
-                // console.log('drivers', response.data.data);
-                // console.log('freeDrivers ', freeDrivers );
-                // console.log('busyDrivers ', busyDrivers );
-                this.setState({
-                    driversFree: freeDrivers,
-                    driversBusy: busyDrivers
-                })
-            })
+    if( !drivers.get('loaded') ) {
+      this.props.getDrivers();
     }
+  }
 
-    handlerMakeRequest(driverId,orderId,orderComment = " ") {
-      console.log(driverId,orderId,orderComment);
-      let data = {
-        order_id: parseInt(orderId, 10),
-        driver_id: parseInt(driverId,10),
-        comment: orderComment
-      }
-      console.log("Request data", data);
-      makeRequest(Endpoints.POST_DRIVER_TO_ORDER(),data)
-        .then((response) => {
-          // console.log(response);
-          // очистим форму после отправки на сервер
-          let { currentOrderId, currentDriverId } = this.state;
-          currentOrderId = null;
-          currentDriverId = null;
-          this.setState({currentOrderId,currentDriverId})
-        });
-    }
+  componentDidMount() {
 
-    handlerOrderSelection(id) {
-      console.log(id);
-      this.setState({
-        currentOrderId: id
-      })
-    }
+  }
 
-    handlerDriverSelection(id) {
-      console.log(id);
-      this.setState({
-        currentDriverId: id
-      })
-    }
+  componentWillUnmount() {
 
-    // handlerChangeDataForm(inputType,inputValue) {
-    //   console.log(inputType,inputValue);
-    //   let { currentOrderId,currentDriverId } = this.state;
-    //   switch (inputType) {
-    //     case "driverId":
-    //       currentDriverId = inputValue;
-    //       break;
-    //     case "orderId":
-    //       currentOrderId = inputValue;
-    //       break;
-    //   }
-    //
-    //   this.setState({ currentDriverId, currentOrderId })
-    // }
+  }
 
-    componentDidMount() {
-        let { orderId } = this.props.params;
-        if( orderId) {
-          let order = {
-            currentOrderId: parseInt(orderId, 10)
+  render() {
+    console.log("ActivityMap");
+    const orders = this.props.orders.get('orderCollection');
+    const drivers = this.props.drivers.get('driverCollection');
+    const currentOrder = this.props.orders.get('currentOrder');
+    const currentDriver = this.props.drivers.get('currentDriver');
+
+    const orderPull = orders.getFreeOrders().toArray();
+    const freeDriversPull = drivers.getDriverFreeOnline().toArray();
+    const busyDriversPull = drivers.getDriverBusyOnline().toArray();
+
+    // console.log("orderPull",orderPull);
+    // console.log("freeDriversPull",freeDriversPull);
+    // console.log("busyDriversPull",busyDriversPull);
+    // console.log("currentOrder", currentOrder);
+    // console.log("currentDriver", currentDriver);
+
+    let markersOrders = orderPull
+      .map((order, index) => {
+          let showCurrent = false;
+          if( currentOrder ) {
+            let showCurrent  = order.id === currentOrder.id ? true : false;
           }
-          this.setState(order);
-        }
-        this.loadData();
-        this._autoUpdate = setInterval( () => {
-            this.loadData();
-        } , 5000);
-    }
 
-    componentWillUnmount() {
-        clearInterval(this._autoUpdate);
-    }
-
-    render() {
-      let { currentOrderId } = this.state;
-      let markersOrders = this.state.orders.
-          map((order, index) => {
-            let showCurrent  = order.id === currentOrderId ? true : false;
-            return (
-              <Marker
-                // required props
-                key={order.id}
-                lat={order.start_point.lat}
-                lng={order.start_point.lng}
-                // any user props
-                markerType="order"
-                showInfo={ showCurrent }
-                onSelection={this.handlerOrderSelection.bind(this)}
-                id={order.id}/>
-            )
-          });
-
-      let markersDriversFree = this.state.driversFree.
-          map((driver, index) => (
+          return (
             <Marker
               // required props
-              key={driver.Id}
-              lat={driver.LastLat}
-              lng={driver.LastLng}
+              key={order.id}
+              lat={order.startPoint.lat}
+              lng={order.startPoint.lng}
               // any user props
-              markerType="driversFree"
-              onSelection={this.handlerDriverSelection.bind(this)}
-              id={driver.Id}/>
-          ));
+              markerType="order"
+              showInfo={ showCurrent }
+              onSelection={this.props.setToCurrentOrder}
+              data={order}/>
+          )
+      });
 
-      let markersDriversBusy = this.state.driversBusy.
-          map((driver, index) => (
-            <Marker
-              // required props
-              key={driver.Id}
-              lat={driver.LastLat}
-              lng={driver.LastLng}
-              // any user props
-              markerType="driversBusy"
-              onSelection={this.handlerDriverSelection.bind(this)}
-              id={driver.Id}/>
-          ));
+    let markersDriversFree = freeDriversPull
+        .map((driver, index) => (
+          <Marker
+            // required props
+            key={driver.id}
+            lat={driver.lastLat}
+            lng={driver.lastLng}
+            // any user props
+            markerType="driversFree"
+            onSelection={this.props.setToCurrentDriver}
+            data={driver}/>
+        ));
 
+    let markersDriversBusy = busyDriversPull
+        .map((driver, index) => (
+          <Marker
+            // required props
+            key={driver.id}
+            lat={driver.lastLat}
+            lng={driver.lastLng}
+            // any user props
+            markerType="driversBusy"
+            onSelection={this.setToCurrentDriver}
+            data={driver}/>
+      ));
 
-        return (
-            <div className="activity-map">
-                <div className="row">
-                    <div className="col-sm-8" style={{height: '600px'}}>
-                        <GoogleMap
-                           bootstrapURLKeys={{
-                             key: 'AIzaSyCWK6ZJN_I1B7yR_WvOh9jmK8KU-LOA1IA',
-                             language: 'ru'
-                            }}
-                           defaultCenter={this.props.center}
-                           defaultZoom={this.props.zoom}>
-                           {markersOrders}
-                           {markersDriversFree}
-                           {markersDriversBusy}
-                        </GoogleMap>
-                    </div>
-                    <div className="col-sm-4">
-                      <FormAddDriverToOrder
-                        onMakeRequest={this.handlerMakeRequest}
-                        orderId={this.state.currentOrderId}
-                        driverId={this.state.currentDriverId}/>
-                    </div>
-                </div>
-            </div>
-        )
-    }
+      return (
+          <Row className="activity-map">
+            <Col xs={12}>
+              <FormSetDriverToOrder
+                selectOrder={currentOrder}
+                selectDriver={currentDriver}
+                onRequest={this.handlerMakeRequest}/>
+            </Col>
+            <Col xs={12} style={{height: '75vh'}}>
+                <GoogleMap
+                   bootstrapURLKeys={{
+                     key: 'AIzaSyCWK6ZJN_I1B7yR_WvOh9jmK8KU-LOA1IA',
+                     language: 'ru'
+                    }}
+                   defaultCenter={this.props.center}
+                   defaultZoom={this.props.zoom}>
+                   {markersOrders}
+                   {markersDriversFree}
+                   {markersDriversBusy}
+                </GoogleMap>
+            </Col>
+          </Row>
+      )
+  }
+
+  handleChange = element => id => {
+    console.log(id);
+    this.setState({
+      [element]: id
+    })
+  }
+
+  handlerMakeRequest = () => {
+    this.props.setDriverToOrder()
+  }
 }
 
-export default Root;
+export default connect((state) => {
+    const drivers = state.drivers
+    const orders = state.orders
+    return { orders,drivers }
+}, { getDrivers, getOrders, setToCurrentDriver, setToCurrentOrder, setDriverToOrder })(ActivityMapPage)

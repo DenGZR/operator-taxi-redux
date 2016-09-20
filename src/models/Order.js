@@ -1,14 +1,9 @@
-/**
- * Created by gasya on 14.04.16.
- * DigitalOutlooks corporation.
- */
 import moment from 'moment'
 import {statusName} from '../dicts/statuses'
 import {Point} from '../structures/Point'
-
+import {User} from './User'
 
 const OTHER_STATUSES = Symbol('OTHER_STATUSES');
-
 
 const configs = {
     incomeDateFormat: "HH:mm:ss DD.MM.YYYY",
@@ -77,6 +72,19 @@ export class OrderCollection {
         });
 
         return orderArray;
+    }
+
+    sortByDuration() {
+      const byStatusDuration = ((/*Order*/a, /*Order*/b)=> {
+          let result = 0;
+          if (a.statusDurationPct < b.statusDurationPct || a.id > b.id) {
+              result = 1;
+          } else if (a.statusDurationPct > b.statusDurationPct || a.id < b.id) {
+              result = -1;
+          }
+          return result;
+      });
+      return this.toArray().sort(byStatusDuration);
     }
 
     getArrayByIDs(/*Array*/ ids) {
@@ -265,46 +273,130 @@ export class Order {
     get statusDurationStr() {
         return `${Math.floor(this.statusDuration.asMinutes())}:${this.statusDuration.seconds()}`;
     }
+
 }
 
-class User {
-    constructor(data) {
-        this._data = data || {};
-    }
+export class OrderForServer extends Order {
+   constructor(order) {
+     super()
+       this.addAddon = this.addAddon.bind(this);
+       this.hasAddon = this.hasAddon.bind(this);
+       this.toggleAddon = this.toggleAddon.bind(this);
+       this.removeAddon = this.removeAddon.bind(this);
+       this.middlePoint = this.middlePoint.bind(this);
+       this.addMiddlePoint = this.addMiddlePoint.bind(this);
+       this._order = order;
+   }
 
-    get id() {
-        return this._data.id;
-    }
+   prepare() {
+       return {
+           client_phone: "380"+this._order.client.phone,
+           client_first_name: this._order.client.first_name,
+           client_last_name: this._order.client.last_name,
+           client_middle_name: this._order.client.middle_name,
+           scheduled_at: this._order.scheduled_at,
+           start_point: this.startPoint.prepare(),
+           end_point: this.endPoint.prepare(),
+           way_points: this._order.way_points.map(point=>point.prepare()),
+           tariff_addons: this.tariffAddons,
+           comment: this._order.comment,
+           passengers: this._order.passengers,
+           scheduled: false,
+           on_city: false
+       }
+   }
 
-    get phone() {
-        return this._data.phone;
-    }
+   get startPoint() {
+        this._order.start_point.id = "start";
+      return this._order.start_point;
+   }
 
-    get firstName() {
-        return this._data.first_name;
-    }
+   get tariffAddons() {
+       return this._order.tariff_addons;
+   }
 
-    get middleName() {
-        return this._data.middle_name;
-    }
+   get endPoint() {
+       this._order.end_point.id = "end";
+       return this._order.end_point;
+   }
 
-    get lastName() {
-        return this._data.last_name;
-    }
+   get middlePointsList() {
+       return this._order.middle_point_list;
+   }
 
-    get fullName() {
-        return `${this.firstName} ${this.middleName} ${this.lastName}`;
-    }
+   middlePoint(id) {
+     this._order.middle_point.id = id;
+     return this._order.middle_point;
+   }
 
-    get gender() {
-        return this._data.gender;
-    }
+   addMiddlePoint() {
+     debugger
+     const id = this._order.middle_point_list.length;
+     const point = this.middlePoint(id);
+     this._order.middle_point_list.push(point);
+   }
 
-    get serviceId() {
-        return this._data.service_id;
-    }
+   get waypoints() {
+       return [this.startPoint, ...this.middlePointsList, this.endPoint].filter(point=>!point.isEmpty());
+   }
 
-    get name() {
-        return this.fullName;
-    }
+   addWayPoint(point) {
+
+       if (this.startPoint.isEmpty()) {
+           this._order.start_point = point
+       } else if (this.endPoint.isEmpty()) {
+           this._order.end_point = point
+       } else {
+           this._order.way_points.push(point);
+       }
+   }
+
+   removeWayPoint(index) {
+       if (index == "start") {
+           this._order.start_point = new Point(0, 0);
+       } else if (index == "end") {
+           this._order.end_point = new Point(0, 0);
+       } else {
+           this._order.way_points.splice(index, 1);
+       }
+   }
+
+   setWayPoint(pointId, point) {
+       if (pointId == "start") {
+           this._order.start_point = point
+       } else if (pointId == "end") {
+           this._order.end_point = point
+       } else {
+           this._order.way_points[pointId] = point
+       }
+   }
+
+   hasAddon(addonId) {
+       return !!(this._order.tariff_addons.find((addon) => addon == addonId));
+   }
+
+   toggleAddon(addonId) {
+       if (this.hasAddon(addonId)) {
+           this.removeAddon(addonId);
+       } else {
+           this.addAddon(addonId);
+       }
+   }
+
+   addAddon(addonId) {
+       if (!this.hasAddon(addonId)) {
+           this._order.tariff_addons.push(parseInt(addonId));
+       }
+   }
+
+   removeAddon(addonId) {
+       this._order.tariff_addons = this._order.tariff_addons.filter(addon => addon != addonId);
+   }
+
+   clientInfo(key, val) {
+     if(!val) {
+       return  this._order[key];
+     }
+     return this._order[key] = val;
+   }
 }
